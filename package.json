@@ -1,0 +1,27 @@
+{
+  "name": "ia-sdr-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && mkdir -p dist/admin && cp src/admin/dashboard.html dist/admin/dashboard.html && (git rev-parse --short HEAD > dist/versao.txt 2>/dev/null || echo desconhecida > dist/versao.txt)",
+    "dev": "tsx watch src/server.ts",
+    "chat": "tsx src/dev/chatCli.ts",
+    "ingest": "tsx src/knowledge/ingest.ts",
+    "test": "node --experimental-strip-types scripts/testar-conversas.mjs",
+    "vagas": "node scripts/publicar-vagas.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.11.3",
+    "googleapis": "^174.0.1",
+    "openai": "^4.104.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "description": "IA SDR para WhatsApp: qualifica o lead, tira dúvida pela base de conhecimento e agenda na agenda real."
+}

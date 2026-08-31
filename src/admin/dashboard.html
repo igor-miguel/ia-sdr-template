@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel da IA SDR</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --hairline: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --hairline: #2c2c2a;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5;
+      --good: #0ca30c;
+      --warning: #fab219;
+      --critical: #e66767;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
+  header.app-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  .muted { color: var(--muted); font-size: 13px; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); padding: 8px 14px;
+  }
+  button.primary { background: var(--accent); color: #fff; border-color: transparent; }
+  button:hover { filter: brightness(0.97); }
+
+  nav.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--hairline); }
+  nav.tabs button {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    border-radius: 0; padding: 10px 14px; color: var(--text-secondary); font-weight: 500;
+  }
+  nav.tabs button.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px;
+  }
+  .tile .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+  .tile .value { font-size: 28px; font-weight: 600; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--hairline); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.02em; }
+  tr:last-child td { border-bottom: none; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover { background: var(--page); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500;
+  }
+  .badge.novo { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .badge.agendado { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+  .badge.precisa_humano { background: color-mix(in srgb, var(--critical) 15%, transparent); color: var(--critical); }
+
+  #loginScreen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; gap: 12px;
+  }
+  #loginScreen input {
+    font: inherit; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); width: 240px;
+  }
+  #loginError { color: var(--critical); font-size: 13px; min-height: 18px; }
+
+  .thread { display: none; }
+  .thread .msg { max-width: 75%; padding: 8px 12px; border-radius: 12px; margin: 6px 0; font-size: 14px; }
+  .thread .msg.in { background: var(--page); border: 1px solid var(--hairline); }
+  .thread .msg.out { background: var(--accent); color: #fff; margin-left: auto; }
+  .thread .msg .when { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  #backToInbox { margin-bottom: 12px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <h1>Painel da IA SDR</h1>
+  <input id="tokenInput" type="password" placeholder="Senha do painel" autofocus />
+  <button class="primary" id="loginBtn">Entrar</button>
+  <div id="loginError"></div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header class="app-header">
+    <h1>Painel da IA SDR</h1>
+    <button id="logoutBtn">Sair</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="overview">Visão geral</button>
+    <button class="tab-btn" data-tab="inbox">Conversas</button>
+  </nav>
+
+  <section id="tab-overview">
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section id="tab-inbox" class="hidden">
+    <div class="card">
+      <table id="inboxTable">
+        <thead><tr><th>Lead</th><th>Telefone</th><th>Última mensagem</th><th>Status</th><th>Quando</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="thread" id="threadView">
+      <button id="backToInbox">← Voltar pra lista</button>
+      <div id="threadMessages"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const TOKEN_KEY = "ia_sdr_admin_token";
+
+  function getToken() { return localStorage.getItem(TOKEN_KEY); }
+  function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+  function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      ...opts,
+      headers: { ...(opts.headers || {}), "x-admin-token": getToken(), "Content-Type": "application/json" },
+    });
+    if (res.status === 401) throw new Error("unauthorized");
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function showApp() {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    loadOverview();
+  }
+
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const value = document.getElementById("tokenInput").value.trim();
+    if (!value) return;
+    setToken(value);
+    try {
+      await api("/admin/api/metrics");
+      showApp();
+    } catch {
+      clearToken();
+      document.getElementById("loginError").textContent = "Senha incorreta.";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    clearToken();
+    location.reload();
+  });
+
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll("[id^='tab-']").forEach((s) => s.classList.add("hidden"));
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
+      if (btn.dataset.tab === "inbox") loadInbox();
+    });
+  });
+
+  function tile(label, value) {
+    return `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+  }
+
+  async function loadOverview() {
+    const m = await api("/admin/api/metrics");
+    const tiles = document.getElementById("tiles");
+    tiles.innerHTML = [
+      tile("Total de leads", m.totalLeads),
+      tile("Agendados", m.leadsByStatus.agendado ?? 0),
+      tile("Precisa humano", m.leadsByStatus.precisa_humano ?? 0),
+      tile("Mensagens hoje", m.messagesToday),
+    ].join("");
+  }
+
+  function statusBadge(status) {
+    return `<span class="badge ${status}">${status}</span>`;
+  }
+
+  function formatWhen(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  async function loadInbox() {
+    document.getElementById("threadView").style.display = "none";
+    document.getElementById("inboxTable").style.display = "table";
+    const { conversations } = await api("/admin/api/inbox");
+    const tbody = document.querySelector("#inboxTable tbody");
+    tbody.innerHTML = conversations
+      .map(
+        (c) => `
+      <tr class="clickable" data-conversation-id="${c.conversation_id}">
+        <td>${c.nome ?? "sem nome"}</td>
+        <td>${c.telefone}</td>
+        <td>${(c.last_message ?? "").slice(0, 60)}</td>
+        <td>${statusBadge(c.status_lead)}</td>
+        <td>${formatWhen(c.last_message_at)}</td>
+      </tr>`,
+      )
+      .join("");
+    tbody.querySelectorAll("tr").forEach((row) => {
+      row.addEventListener("click", () => openThread(row.dataset.conversationId));
+    });
+  }
+
+  async function openThread(conversationId) {
+    const { messages } = await api(`/admin/api/conversations/${conversationId}/messages`);
+    document.getElementById("inboxTable").style.display = "none";
+    const threadView = document.getElementById("threadView");
+    threadView.style.display = "block";
+    document.getElementById("threadMessages").innerHTML = messages
+      .map(
+        (m) => `<div class="msg ${m.direction}">${m.content}<div class="when">${formatWhen(m.created_at)}</div></div>`,
+      )
+      .join("");
+  }
+
+  document.getElementById("backToInbox").addEventListener("click", loadInbox);
+
+  if (getToken()) {
+    api("/admin/api/metrics")
+      .then(showApp)
+      .catch(() => clearToken());
+  }
+</script>
+
+</body>
+</html>
