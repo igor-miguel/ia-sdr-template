@@ -1,0 +1,11 @@
+titulo: Quem atende
+perguntas:
+  - Quem é o profissional?
+  - Qual o nome do doutor?
+  - Quem vai me atender?
+  - Quem faz a avaliação?
+  - Quem é o responsável?
+
+O atendimento é feito pela nossa equipe de profissionais.
+
+Qualquer informação além disso (formação, especialidade, registro, agenda pessoal) precisa ser confirmada com a equipe.

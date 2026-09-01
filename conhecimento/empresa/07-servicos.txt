@@ -1,0 +1,9 @@
+titulo: Serviços atendidos
+perguntas:
+  - Vocês fazem implante?
+  - Vocês atendem ortodontia?
+  - Que tipo de tratamento vocês fazem?
+  - Quais especialidades vocês têm?
+  - Vocês fazem isso que eu preciso?
+
+Atendemos: clínico geral, ortodontia, implantes, restaurações, estética e prótese.

@@ -28,13 +28,24 @@ errado. Os comentários explicam qual.
 
 ---
 
-## Configurar: você edita 2 lugares
+## Configurar: você edita 3 lugares
 
-**1. `src/negocio/negocio.ts`** — todo o conteúdo: nome, roteiro comercial,
-endereço, expediente, base de conhecimento. É um arquivo só, comentado passo a
-passo. Vem preenchido com um exemplo fictício pra você ver rodando antes de trocar.
+**1. `conhecimento/`** — a base da IA, em arquivos de texto comuns (`.txt`).
+Não precisa saber programar. Leia `conhecimento/LEIA-ME.txt` primeiro.
 
-**2. `.env`** — as credenciais. Copie de `.env.example`, que explica onde
+```
+conhecimento/
+  empresa/       FATOS. O que a IA responde quando perguntam.   → vão pra busca
+  atendimento/   COMPORTAMENTO. Como ela conduz a conversa.     → só no prompt
+```
+
+Não misture as duas pastas — o `LEIA-ME.txt` explica por quê, e a razão é
+técnica: misturar degrada a busca.
+
+**2. `src/negocio/negocio.ts`** — a configuração: nome da empresa, nome da
+atendente, endereço, expediente, duração do atendimento e o roteiro de venda.
+
+**3. `.env`** — as credenciais. Copie de `.env.example`, que explica onde
 conseguir cada uma.
 
 Fora desses dois, o código não deveria precisar de mudança.
@@ -52,14 +63,14 @@ cp .env.example .env     # e preencha
 `vector` (Database > Extensions) e rode os arquivos de `src/db/migrations/` na
 ordem numérica, pelo SQL Editor.
 
-**Base de conhecimento** — depois de editar `negocio.ts`:
+**Base de conhecimento** — depois de editar `conhecimento/empresa/`:
 
 ```bash
 npm run ingest
 ```
 
-Rode isso **toda vez** que mexer em `BASE_CONHECIMENTO`. Sem isso a IA continua
-respondendo com o conteúdo antigo.
+Rode isso **toda vez** que mexer em `conhecimento/empresa/`. Sem isso a IA
+continua respondendo com o conteúdo antigo.
 
 **Subir**
 
@@ -147,8 +158,11 @@ manda mensagem. Deixe o billing automático ligado.
 ## Estrutura
 
 ```
+conhecimento/            ← VOCÊ EDITA AQUI (a base da IA, em .txt)
+  empresa/               fatos → vão pra busca
+  atendimento/           comportamento → só no prompt
 src/
-  negocio/negocio.ts     ← VOCÊ EDITA AQUI (conteúdo, roteiro, base)
+  negocio/negocio.ts     ← E AQUI (nome, endereço, expediente, roteiro)
   agent/                 agente, ferramentas, prompt, garantias
   calendar/              disponibilidade, vagas publicadas, reserva
   knowledge/             RAG: embeddings, ingestão, busca

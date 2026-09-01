@@ -18,8 +18,8 @@
 //   3. EXPEDIENTE      — horário de funcionamento (a IA nunca oferece fora dele)
 //   4. SERVICO         — o que é agendado
 //   5. ROTEIRO         — o script comercial: a parte que mais muda resultado
-//   6. BASE_CONHECIMENTO — os fatos que respondem pergunta de cliente
-//   7. DIRETRIZES      — persona e tratamento de objeção
+//   6. (conteúdo)      — os fatos e as diretrizes agora ficam na pasta
+//                        `conhecimento/`. Veja conhecimento/LEIA-ME.txt.
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -174,197 +174,26 @@ export const ROTEIRO = {
 };
 
 // ============================================================================
-// 6. BASE DE CONHECIMENTO  (vai pro RAG — rode `npm run ingest` ao mudar)
+// 6 e 7. BASE DE CONHECIMENTO E DIRETRIZES  →  pasta `conhecimento/`
 // ============================================================================
+//
+// O conteúdo saiu deste arquivo e virou markdown editável, pra quem preenche
+// não precisar mexer em código:
+//
+//   conhecimento/empresa/      FATOS que a IA responde  → vão pro RAG (busca)
+//   conhecimento/atendimento/  COMO ela deve conduzir   → só prompt, nunca RAG
+//
+// Leia `conhecimento/LEIA-ME.txt` antes de editar — em especial a parte sobre o
+// campo `perguntas`, que é o que faz a busca acertar.
+//
+// Reexportado aqui só pra quem já importava daqui continuar funcionando.
 
-export interface KnowledgeChunk {
-  title: string;
-  content: string;
-  /**
-   * Como o CLIENTE pergunta isso, na língua dele — não na sua.
-   *
-   * Este campo é o que faz o RAG funcionar. Entra só no texto embarcado; o
-   * `content` devolvido à IA continua limpo.
-   *
-   * Medido no projeto original: "vocês aceitam meu plano odontológico?" não
-   * encontrava o chunk que dizia "não trabalhamos com convênio" — as palavras
-   * eram outras. Com as perguntas equivalentes, passou a acertar.
-   *
-   * Escreva 4-8 formulações reais por chunk. Vale abrir o WhatsApp e copiar como
-   * as pessoas perguntam de verdade.
-   */
-  perguntas?: string[];
-}
-
-/** Texto embarcado no pgvector: título + perguntas equivalentes + conteúdo. */
-export function textoParaEmbedding(c: KnowledgeChunk): string {
-  const perguntas = c.perguntas?.length ? `\nPerguntas equivalentes: ${c.perguntas.join(" ")}` : "";
-  return `${c.title}${perguntas}\n${c.content}`;
-}
-
-/**
- * FATOS que respondem pergunta de cliente. Só isso entra aqui.
- *
- * Regra que custou caro pra aprender: NÃO misture instrução de comportamento
- * ("o SDR não pode fazer X", "nosso público-alvo é Y") nesta lista. Isso vai em
- * DIRETRIZES, abaixo. No projeto original, 6 chunks de comportamento estavam
- * competindo na busca com o conteúdo factual e afundando as respostas certas.
- * Separar resolveu.
- */
-export const BASE_CONHECIMENTO: KnowledgeChunk[] = [
-  {
-    title: "Convênio e plano de saúde",
-    perguntas: [
-      "Vocês aceitam meu plano?",
-      "Atendem por convênio?",
-      "Trabalham com plano de saúde?",
-      "É só particular?",
-      "Meu plano cobre?",
-    ],
-    content:
-      "Não trabalhamos com convênio nem plano de saúde. O atendimento é exclusivamente particular. " +
-      "Formas de pagamento: cartão de crédito, cartão de débito, dinheiro, boleto e PIX.",
-  },
-  {
-    title: "Preço e valor",
-    // De propósito SEM citar procedimento específico: no projeto original, citar
-    // ("preço de implante") fazia este chunk vencer o de serviços em perguntas
-    // de disponibilidade como "vocês fazem implante?".
-    perguntas: [
-      "Quanto custa?",
-      "Qual o valor?",
-      "Vocês têm tabela de preços?",
-      "Me passa um orçamento?",
-      "Tá caro?",
-    ],
-    content:
-      "O valor só é passado depois da avaliação presencial, nunca por telefone ou WhatsApp. " +
-      "Cada caso é diferente: sem examinar, qualquer número seria chute. Na avaliação o " +
-      "profissional examina, monta o plano e apresenta o valor exato, com as opções de pagamento.",
-  },
-  {
-    title: "Avaliação inicial — gratuita e sem compromisso",
-    perguntas: [
-      "A primeira consulta é paga?",
-      "Quanto custa a avaliação?",
-      "Como funciona a avaliação?",
-      "Preciso pagar pra ser atendido na primeira vez?",
-    ],
-    content:
-      "A avaliação não tem custo. É feita uma análise completa e, na mesma consulta, o cliente " +
-      "recebe a indicação da melhor solução e o planejamento. Só passa a pagar se decidir iniciar o tratamento.",
-  },
-  {
-    title: "Formas de pagamento e parcelamento",
-    perguntas: [
-      "Posso parcelar?",
-      "Aceitam cartão?",
-      "Dá pra pagar no boleto?",
-      "Aceitam PIX?",
-      "Em quantas vezes posso dividir?",
-    ],
-    content:
-      "Cartão de crédito, cartão de débito, dinheiro, boleto e PIX. O parcelamento é alinhado ao plano, na avaliação.",
-  },
-  {
-    title: "Horário de atendimento",
-    perguntas: [
-      "Que horas vocês abrem?",
-      "Abre sábado?",
-      "Atende domingo?",
-      "Qual o horário de funcionamento?",
-      "Abre em feriado?",
-    ],
-    content:
-      "Segunda a sexta das 9h às 19h. Sábado das 9h às 17h. Domingo não abrimos. Em feriado também não.",
-  },
-  {
-    title: "Endereço, como chegar e estacionamento",
-    perguntas: [
-      "Onde fica?",
-      "Qual o endereço?",
-      "Tem estacionamento?",
-      "É perto do metrô?",
-      "Como faço pra chegar aí?",
-      "Vocês têm outra unidade?",
-    ],
-    content:
-      "Rua Exemplo, 123, Sala 4 — Bairro, São Paulo, SP. Fica a 200 metros da estação de metrô. " +
-      "Unidade única. Não temos estacionamento próprio.",
-  },
-  {
-    title: "Serviços atendidos",
-    // Formulações de DISPONIBILIDADE ("vocês fazem/atendem"), não de preço.
-    perguntas: [
-      "Vocês fazem implante?",
-      "Vocês atendem ortodontia?",
-      "Que tipo de tratamento vocês fazem?",
-      "Quais especialidades vocês têm?",
-    ],
-    content:
-      "Atendemos: clínico geral, ortodontia, implantes, restaurações, estética e prótese.",
-  },
-  {
-    title: "Quem atende",
-    perguntas: [
-      "Quem é o profissional?",
-      "Qual o nome do doutor?",
-      "Quem vai me atender?",
-      "Quem faz a avaliação?",
-    ],
-    content:
-      "O atendimento é feito pela nossa equipe de profissionais. Qualquer informação além disso " +
-      "(formação, especialidade, registro, agenda pessoal) precisa ser confirmada com a equipe.",
-  },
-];
-
-// ============================================================================
-// 7. DIRETRIZES — persona e objeções (NÃO vão pro RAG, só pro prompt)
-// ============================================================================
-
-/**
- * Como atender. Comportamento nunca pode ser sorteado por similaridade, então
- * isto fica fixo no prompt, sempre presente.
- */
-export const DIRETRIZES: KnowledgeChunk[] = [
-  {
-    title: "Apresentação do negócio",
-    content:
-      "Somos um time que trata o cliente com atenção genuína, transparência e competência. " +
-      "O bem-estar de quem nos procura é sempre a prioridade.",
-  },
-  {
-    title: "Quem é o nosso cliente",
-    content:
-      "Pessoas que querem resolver um problema e valorizam ser bem atendidas. O pagamento " +
-      "facilitado também atrai quem prefere tratamento programado.",
-  },
-  {
-    title: "Valores do atendimento",
-    content:
-      "Ética acima de tudo (nunca indicar o que não é do interesse real do cliente); " +
-      "transparência sobre diagnóstico, custo e expectativa; competência com humildade; " +
-      "acolhimento; quando erra, assume e corrige.",
-  },
-  {
-    title: 'Objeção — "não tenho dinheiro agora"',
-    content:
-      "Acolher sem pressionar e lembrar das formas de pagamento facilitadas. Reforçar que a " +
-      "avaliação em si não custa nada, então não há risco em vir conhecer.",
-  },
-  {
-    title: 'Objeção — "vou ver um dia que consigo e te aviso"',
-    content:
-      "Não deixar em aberto. Oferecer horário concreto (ex.: hoje às 16h, amanhã às 9h) e " +
-      "reservar na hora, com tom acolhedor de prioridade, sem pressão e sem constranger.",
-  },
-  {
-    title: "Atendimento ruim — o que evitar",
-    content:
-      "Não ouvir o que o cliente realmente precisa; abandonar quem já está em atendimento; " +
-      "indicar algo por interesse financeiro do negócio em vez do interesse do cliente.",
-  },
-];
+export {
+  BASE_CONHECIMENTO,
+  DIRETRIZES,
+  textoParaEmbedding,
+  type KnowledgeChunk,
+} from "./carregarConhecimento.js";
 
 // ============================================================================
 // 8. QUANDO PASSAR PARA UM HUMANO

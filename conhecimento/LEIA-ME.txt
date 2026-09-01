@@ -1,0 +1,152 @@
+========================================================================
+ A BASE DE CONHECIMENTO DA IA
+========================================================================
+
+Esta pasta é o cérebro da atendente. É daqui que ela tira o que responder
+e como conduzir a conversa.
+
+Não precisa saber programar pra mexer: são arquivos de texto comuns.
+Abre com dois cliques, edita e salva.
+
+   conhecimento/
+     empresa/       FATOS. O que a IA responde quando perguntam.
+     atendimento/   COMPORTAMENTO. Como ela conduz a conversa.
+
+
+------------------------------------------------------------------------
+ A REGRA MAIS IMPORTANTE: NÃO MISTURE AS DUAS PASTAS
+------------------------------------------------------------------------
+
+  Responde uma pergunta do cliente  ->  empresa/
+     ex: "não aceitamos convênio", "abre sábado das 9h às 17h"
+
+  Diz à IA como se comportar        ->  atendimento/
+     ex: "acolher sem pressionar", "nunca deduzir"
+
+POR QUE ISSO IMPORTA
+
+Só a pasta empresa/ vai pra busca. Quando o cliente pergunta algo, o
+sistema procura ali o trecho mais parecido com a pergunta e entrega
+pra IA.
+
+No sistema original os dois estavam misturados, e a busca degradava.
+Numa pergunta como "vocês aceitam meu plano odontológico?", o que
+voltava era "Público-alvo" e "Serviços oferecidos" — os textos de
+comportamento competiam com o conteúdo factual e ganhavam. A resposta
+certa sobre convênio ficava de fora. Separar resolveu.
+
+A pasta atendimento/ nunca entra na busca: fica SEMPRE no contexto da
+IA. Regra de conduta não pode depender de sorteio — senão ela se
+comportaria bem só às vezes.
+
+
+------------------------------------------------------------------------
+ COMO É UM ARQUIVO
+------------------------------------------------------------------------
+
+titulo: Convênio e plano de saúde
+perguntas:
+  - Vocês aceitam meu plano?
+  - Atendem por convênio?
+  - É só particular?
+
+Não trabalhamos com convênio nem plano de saúde. O atendimento é
+exclusivamente particular.
+
+Formas de pagamento: cartão, dinheiro, boleto e PIX.
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  titulo      Obrigatório. Como esse assunto se chama.
+
+  perguntas   Só nos arquivos de empresa/. É o campo que faz a busca
+              funcionar — explicado abaixo.
+
+  (linha em branco)
+
+  O texto     O que a IA vai usar pra responder. Escreva direto, como
+              você explicaria pra um cliente.
+
+Os arquivos são numerados (01-, 02-) só pra ficarem em ordem legível.
+Pode criar, renomear e apagar à vontade.
+
+
+------------------------------------------------------------------------
+ O CAMPO "perguntas" É O QUE FAZ A BUSCA ACERTAR
+------------------------------------------------------------------------
+
+Escreva as perguntas COMO O CLIENTE ESCREVE, não como você escreveria.
+
+O sistema compara a mensagem que chegou com esse campo. Se o cliente
+pergunta "aceitam meu plano odontológico?" e o seu texto só diz "não
+trabalhamos com convênio", o computador não sabe que é a mesma coisa —
+são palavras diferentes. Com a pergunta equivalente listada, ele acerta.
+
+Isso foi medido no sistema original: essa exata pergunta não encontrava
+a resposta certa. Depois de listar as formulações reais, passou a
+acertar em 1º lugar em 16 de 16 casos testados.
+
+COMO FAZER BEM
+
+  - 4 a 8 formulações por arquivo.
+
+  - Abra o WhatsApp da empresa e COPIE COMO AS PESSOAS PERGUNTAM DE
+    VERDADE. Vale o jeito errado, o abreviado, o com gíria.
+
+  - Inclua os sinônimos que o cliente usa e você não: "plano" e
+    "convênio", "aparelho" e "ortodontia", "quanto custa" e "tá caro".
+
+CUIDADO COM UM DETALHE
+
+Não cite serviço específico no arquivo de preço ("quanto custa
+implante?"). Isso faz o arquivo de preço ganhar de "vocês fazem
+implante?", que é pergunta de disponibilidade, não de preço. Deixe o
+preço genérico.
+
+
+------------------------------------------------------------------------
+ DEPOIS DE MEXER, RODE ISTO
+------------------------------------------------------------------------
+
+    npm run ingest
+
+TODA VEZ que alterar qualquer arquivo de empresa/. Sem isso a IA
+continua respondendo com a versão anterior — o texto novo está no
+arquivo, mas não na busca.
+
+Arquivos de atendimento/ não precisam: eles entram direto no prompt e
+valem no próximo reinício do sistema.
+
+
+------------------------------------------------------------------------
+ ESCREVENDO BEM PARA A IA
+------------------------------------------------------------------------
+
+ESCREVA A RESPOSTA, NÃO O TÓPICO.
+"Convênio: não" não serve. "Não trabalhamos com convênio nem plano de
+saúde, o atendimento é particular" serve.
+
+UM ASSUNTO POR ARQUIVO.
+Se um arquivo responde três coisas diferentes, a busca fica confusa
+sobre quando usá-lo. Separe.
+
+SÓ COLOQUE O QUE É VERDADE E ESTÁ CONFIRMADO.
+O que não estiver aqui, a IA dirá que vai confirmar com a equipe — e
+isso é o comportamento certo. É melhor ela não saber do que inventar e
+criar cliente frustrado na recepção.
+
+NÃO COLOQUE PREÇO DE TABELA
+a não ser que a empresa realmente passe preço por WhatsApp. O padrão do
+sistema é não passar.
+
+
+------------------------------------------------------------------------
+ O QUE NÃO FICA NESTA PASTA
+------------------------------------------------------------------------
+
+Configuração fica em  src/negocio/negocio.ts :
+nome da empresa, nome da atendente, endereço usado na agenda, horário
+de funcionamento, duração do atendimento, o roteiro de venda e quais
+dados pedir antes de fechar.
+
+Credenciais (chaves de API, senhas) ficam no arquivo  .env .
