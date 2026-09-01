@@ -18,8 +18,8 @@
 //   3. EXPEDIENTE      — horário de funcionamento (a IA nunca oferece fora dele)
 //   4. SERVICO         — o que é agendado
 //   5. ROTEIRO         — o script comercial: a parte que mais muda resultado
-//   6. (conteúdo)      — os fatos e as diretrizes agora ficam na pasta
-//                        `conhecimento/`. Veja conhecimento/LEIA-ME.txt.
+//   6. (conteúdo)      — os fatos e as diretrizes ficam em
+//                        BASE-DE-CONHECIMENTO.txt, na raiz do projeto.
 // ----------------------------------------------------------------------------
 
 // ============================================================================
@@ -174,17 +174,18 @@ export const ROTEIRO = {
 };
 
 // ============================================================================
-// 6 e 7. BASE DE CONHECIMENTO E DIRETRIZES  →  pasta `conhecimento/`
+// 6 e 7. BASE DE CONHECIMENTO E DIRETRIZES  →  BASE-DE-CONHECIMENTO.txt
 // ============================================================================
 //
-// O conteúdo saiu deste arquivo e virou markdown editável, pra quem preenche
-// não precisar mexer em código:
+// O conteúdo saiu deste arquivo e virou um .txt editável, pra quem preenche não
+// precisar mexer em código. Fica em BASE-DE-CONHECIMENTO.txt, na raiz, com duas
+// seções:
 //
-//   conhecimento/empresa/      FATOS que a IA responde  → vão pro RAG (busca)
-//   conhecimento/atendimento/  COMO ela deve conduzir   → só prompt, nunca RAG
+//   [EMPRESA]      FATOS que a IA responde  → vão pro RAG (busca)
+//   [ATENDIMENTO]  COMO ela deve conduzir   → só prompt, nunca RAG
 //
-// Leia `conhecimento/LEIA-ME.txt` antes de editar — em especial a parte sobre o
-// campo `perguntas`, que é o que faz a busca acertar.
+// As instruções de preenchimento estão no topo do próprio .txt — em especial a
+// parte sobre o campo `perguntas`, que é o que faz a busca acertar.
 //
 // Reexportado aqui só pra quem já importava daqui continuar funcionando.
 

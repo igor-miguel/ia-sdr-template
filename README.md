@@ -30,17 +30,16 @@ errado. Os comentários explicam qual.
 
 ## Configurar: você edita 3 lugares
 
-**1. `conhecimento/`** — a base da IA, em arquivos de texto comuns (`.txt`).
-Não precisa saber programar. Leia `conhecimento/LEIA-ME.txt` primeiro.
+**1. `BASE-DE-CONHECIMENTO.txt`** — a base da IA, num arquivo de texto só.
+Não precisa saber programar: as instruções de preenchimento estão no topo do
+próprio arquivo. Ele tem duas seções, e a diferença entre elas importa:
 
 ```
-conhecimento/
-  empresa/       FATOS. O que a IA responde quando perguntam.   → vão pra busca
-  atendimento/   COMPORTAMENTO. Como ela conduz a conversa.     → só no prompt
+[EMPRESA]      fatos que a IA responde     → vão pra busca (RAG)
+[ATENDIMENTO]  como ela conduz a conversa  → sempre no prompt, nunca na busca
 ```
 
-Não misture as duas pastas — o `LEIA-ME.txt` explica por quê, e a razão é
-técnica: misturar degrada a busca.
+Não troque um pelo outro — misturar degrada a busca, e o arquivo explica por quê.
 
 **2. `src/negocio/negocio.ts`** — a configuração: nome da empresa, nome da
 atendente, endereço, expediente, duração do atendimento e o roteiro de venda.
@@ -63,14 +62,14 @@ cp .env.example .env     # e preencha
 `vector` (Database > Extensions) e rode os arquivos de `src/db/migrations/` na
 ordem numérica, pelo SQL Editor.
 
-**Base de conhecimento** — depois de editar `conhecimento/empresa/`:
+**Base de conhecimento** — depois de editar a seção `[EMPRESA]`:
 
 ```bash
 npm run ingest
 ```
 
-Rode isso **toda vez** que mexer em `conhecimento/empresa/`. Sem isso a IA
-continua respondendo com o conteúdo antigo.
+Rode isso **toda vez** que mexer na seção `[EMPRESA]`. Sem isso a IA continua
+respondendo com o conteúdo antigo.
 
 **Subir**
 
@@ -158,9 +157,7 @@ manda mensagem. Deixe o billing automático ligado.
 ## Estrutura
 
 ```
-conhecimento/            ← VOCÊ EDITA AQUI (a base da IA, em .txt)
-  empresa/               fatos → vão pra busca
-  atendimento/           comportamento → só no prompt
+BASE-DE-CONHECIMENTO.txt ← VOCÊ EDITA AQUI (a base da IA, em .txt)
 src/
   negocio/negocio.ts     ← E AQUI (nome, endereço, expediente, roteiro)
   agent/                 agente, ferramentas, prompt, garantias

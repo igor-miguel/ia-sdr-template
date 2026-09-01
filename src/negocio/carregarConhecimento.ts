@@ -1,25 +1,23 @@
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Carrega a pasta `conhecimento/` — os arquivos .txt que o time edita.
+// Lê o arquivo BASE-DE-CONHECIMENTO.txt, na raiz do projeto.
 //
-// Você não deve precisar mexer neste arquivo. Ele só lê a pasta, interpreta o
-// cabeçalho de cada arquivo e devolve os blocos prontos.
+// Você não deve precisar mexer aqui. Este módulo só interpreta o arquivo e
+// devolve os blocos prontos. As instruções de preenchimento estão no topo do
+// próprio .txt, pra quem edita não precisar abrir código nenhum.
 //
-// A SEPARAÇÃO ENTRE AS DUAS PASTAS É O PONTO MAIS IMPORTANTE DAQUI:
+// A SEPARAÇÃO ENTRE AS DUAS SEÇÕES É O PONTO MAIS IMPORTANTE DAQUI:
 //
-//   conhecimento/empresa/     FATOS  → vão pro RAG (busca) e pro prompt
-//   conhecimento/atendimento/ COMPORTAMENTO → SÓ pro prompt, nunca pro RAG
+//   [EMPRESA]      FATOS  → vão pro RAG (busca) e pro prompt
+//   [ATENDIMENTO]  COMPORTAMENTO → SÓ pro prompt, nunca pro RAG
 //
 // Isso não é organização, é correção. No sistema original os dois estavam
 // misturados e a busca degradava: numa pergunta como "vocês aceitam meu plano
-// odontológico?" o RAG devolvia "Público-alvo" e "Serviços oferecidos" em vez do
-// bloco sobre convênio — os textos de comportamento competiam por similaridade
-// com o conteúdo factual e ganhavam. Separar resolveu.
-//
-// Regra prática: se o texto RESPONDE UMA PERGUNTA DE CLIENTE, é empresa/.
-// Se ele diz à IA COMO SE COMPORTAR, é atendimento/.
+// odontológico?" o RAG devolvia "Público-alvo" e "Serviços oferecidos" em vez
+// do bloco sobre convênio — os textos de comportamento competiam por
+// similaridade com o conteúdo factual e ganhavam. Separar resolveu.
 
 export interface KnowledgeChunk {
   title: string;
@@ -43,113 +41,181 @@ export function textoParaEmbedding(c: KnowledgeChunk): string {
   return `${c.title}${perguntas}\n${c.content}`;
 }
 
+export const NOME_DO_ARQUIVO = "BASE-DE-CONHECIMENTO.txt";
+
 /**
- * Acha a pasta `conhecimento/` subindo a partir deste arquivo.
+ * Acha o arquivo subindo a partir deste módulo.
  *
  * Subir em vez de usar caminho fixo faz o mesmo código funcionar rodando de
  * `src/` (npm run dev) e de `dist/` (produção), que ficam em profundidades
  * diferentes.
  */
-function acharPastaConhecimento(): string {
+function acharArquivo(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 6; i++) {
-    const tentativa = join(dir, "conhecimento");
+    const tentativa = join(dir, NOME_DO_ARQUIVO);
     if (existsSync(tentativa)) return tentativa;
     const pai = resolve(dir, "..");
     if (pai === dir) break;
     dir = pai;
   }
   throw new Error(
-    "Pasta `conhecimento/` não encontrada. Ela fica na raiz do projeto, ao lado do package.json.",
+    `${NOME_DO_ARQUIVO} não encontrado. Ele fica na raiz do projeto, ao lado do package.json.`,
   );
 }
 
+const SEPARADOR = /^\s*={3,}\s*$/;
+const SECAO = /^\s*\[\s*(EMPRESA|ATENDIMENTO)\s*\]\s*$/i;
+const COMENTARIO = /^\s*#/;
+
 /**
- * Formato do arquivo — texto puro, sem dependência de YAML:
+ * Interpreta um bloco:
  *
  *   titulo: Convênio e plano de saúde
  *   perguntas:
- *     - Vocês aceitam meu plano?
- *     - Atendem por convênio?
+ *   - Vocês aceitam meu plano?
+ *   resposta:
+ *   Não trabalhamos com convênio...
  *
- *   O texto da resposta vem depois da linha em branco.
- *
- * O cabeçalho vai do topo até a primeira linha em branco. Cercas `---` em volta
- * dele são aceitas, mas não exigidas: quem preenche não deveria precisar
- * decorar pontuação pra escrever uma informação da empresa.
+ * As mensagens de erro citam o título do bloco (ou o número dele, quando é o
+ * título que falta) porque quem edita não tem número de linha à mão: ele está
+ * olhando um .txt, não um editor de código.
  */
-function interpretar(arquivo: string, bruto: string): KnowledgeChunk {
-  const texto = bruto.replace(/^﻿/, "").trim();
+function interpretarBloco(bruto: string, secao: string, indice: number): KnowledgeChunk | null {
+  const linhas = bruto.split(/\r?\n/).filter((l) => !COMENTARIO.test(l));
+  if (linhas.every((l) => !l.trim())) return null; // bloco vazio: separador sobrando
 
-  const comCercas = texto.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-  const semCercas = texto.match(/^([\s\S]*?)\r?\n[ \t]*\r?\n([\s\S]*)$/);
-  const m = comCercas ?? semCercas;
-  if (!m) {
+  let titulo = "";
+  const perguntas: string[] = [];
+  const resposta: string[] = [];
+  let campo: "perguntas" | "resposta" | null = null;
+
+  for (const linha of linhas) {
+    const cabecalho = linha.match(/^\s*(titulo|título|perguntas|resposta)\s*:\s*(.*)$/i);
+    if (cabecalho) {
+      const chave = cabecalho[1].toLowerCase().replace("título", "titulo");
+      const valor = cabecalho[2].trim();
+      if (chave === "titulo") {
+        titulo = valor;
+        campo = null;
+      } else if (chave === "perguntas") {
+        campo = "perguntas";
+        if (valor) perguntas.push(valor);
+      } else {
+        campo = "resposta";
+        if (valor) resposta.push(valor);
+      }
+      continue;
+    }
+
+    if (campo === "perguntas") {
+      const item = linha.match(/^\s*[-*•]\s*(.+)$/);
+      if (item) {
+        perguntas.push(item[1].trim());
+        continue;
+      }
+      if (!linha.trim()) continue;
+      // Linha solta depois de `perguntas:` sem hífen — trata como pergunta,
+      // em vez de descartar em silêncio.
+      perguntas.push(linha.trim());
+      continue;
+    }
+
+    if (campo === "resposta") resposta.push(linha);
+  }
+
+  const onde = titulo ? `no bloco "${titulo}"` : `no bloco nº ${indice + 1} da seção [${secao}]`;
+
+  if (!titulo) {
     throw new Error(
-      `${arquivo}: formato inválido. Esperado \`titulo:\` no topo, uma linha em branco, ` +
-        `e o texto da resposta embaixo. Veja conhecimento/LEIA-ME.txt.`,
+      `${NOME_DO_ARQUIVO}: falta a linha "titulo:" ${onde}. ` +
+        `Todo bloco precisa de um título.`,
     );
   }
 
-  const [, cabecalho, corpo] = m;
-  let titulo = "";
-  const perguntas: string[] = [];
-  let dentroDePerguntas = false;
-
-  for (const linha of cabecalho.split(/\r?\n/)) {
-    const item = linha.match(/^\s*-\s+(.*)$/);
-    if (dentroDePerguntas && item) {
-      perguntas.push(desaspar(item[1]));
-      continue;
-    }
-    dentroDePerguntas = false;
-
-    const campo = linha.match(/^([A-Za-zç]+)\s*:\s*(.*)$/);
-    if (!campo) continue;
-    const [, chave, valor] = campo;
-    if (chave === "titulo") titulo = desaspar(valor);
-    else if (chave === "perguntas") {
-      dentroDePerguntas = true;
-      if (valor.trim()) perguntas.push(desaspar(valor));
-    }
+  const content = resposta.join("\n").trim();
+  if (!content) {
+    throw new Error(
+      `${NOME_DO_ARQUIVO}: falta a linha "resposta:" (ou ela está vazia) ${onde}. ` +
+        `Sem resposta a IA não tem o que dizer sobre esse assunto.`,
+    );
   }
-
-  if (!titulo) throw new Error(`${arquivo}: falta a linha \`titulo:\` no topo. Veja conhecimento/LEIA-ME.txt.`);
-
-  const content = corpo.trim();
-  if (!content) throw new Error(`${arquivo}: o arquivo tem cabeçalho mas nenhum texto embaixo.`);
 
   return { title: titulo, content, perguntas: perguntas.length ? perguntas : undefined };
 }
 
-const desaspar = (s: string) => s.trim().replace(/^["'](.*)["']$/, "$1");
+function carregar(): { empresa: KnowledgeChunk[]; atendimento: KnowledgeChunk[] } {
+  const texto = readFileSync(acharArquivo(), "utf8").replace(/^﻿/, "");
 
-function carregarPasta(nome: string): KnowledgeChunk[] {
-  const dir = join(acharPastaConhecimento(), nome);
-  if (!existsSync(dir)) {
-    throw new Error(`Pasta \`conhecimento/${nome}/\` não existe.`);
+  // Fatia por seção primeiro; os blocos são separados dentro de cada uma.
+  const secoes: Record<string, string[]> = { EMPRESA: [], ATENDIMENTO: [] };
+  let atual: string | null = null;
+  let buffer: string[] = [];
+
+  const fechar = () => {
+    if (atual) secoes[atual].push(buffer.join("\n"));
+    buffer = [];
+  };
+
+  for (const linha of texto.split(/\r?\n/)) {
+    const cabecalho = linha.match(SECAO);
+    if (cabecalho) {
+      fechar();
+      atual = cabecalho[1].toUpperCase();
+      continue;
+    }
+    if (SEPARADOR.test(linha)) {
+      fechar();
+      continue;
+    }
+    if (atual) buffer.push(linha);
+  }
+  fechar();
+
+  if (secoes.EMPRESA.length === 0) {
+    throw new Error(
+      `${NOME_DO_ARQUIVO}: não achei a seção [EMPRESA]. ` +
+        `Ela marca onde começam os fatos que a IA responde.`,
+    );
   }
 
-  // Ordem alfabética — por isso os arquivos são numerados (01-, 02-...).
-  // A ordem só afeta como o bloco aparece no prompt; a busca não depende dela.
-  const arquivos = readdirSync(dir)
-    .filter((f) => /\.(txt|md)$/i.test(f) && !f.startsWith("_"))
-    .sort();
+  const mapear = (nome: "EMPRESA" | "ATENDIMENTO") =>
+    secoes[nome]
+      .map((b, i) => interpretarBloco(b, nome, i))
+      .filter((c): c is KnowledgeChunk => c !== null);
 
-  if (arquivos.length === 0) {
-    throw new Error(`Pasta \`conhecimento/${nome}/\` está vazia — a IA ficaria sem informação.`);
+  const empresa = mapear("EMPRESA");
+  const atendimento = mapear("ATENDIMENTO");
+
+  if (empresa.length === 0) {
+    throw new Error(
+      `${NOME_DO_ARQUIVO}: a seção [EMPRESA] está vazia — a IA ficaria sem informação nenhuma.`,
+    );
   }
 
-  return arquivos.map((f) => interpretar(`conhecimento/${nome}/${f}`, readFileSync(join(dir, f), "utf8")));
+  // Aviso, não erro: um bloco de comportamento com `perguntas:` provavelmente
+  // está na seção errada, mas não impede o sistema de subir.
+  for (const c of atendimento) {
+    if (c.perguntas) {
+      console.warn(
+        `[conhecimento] "${c.title}" está em [ATENDIMENTO] mas tem "perguntas:". ` +
+          `O campo só vale em [EMPRESA] — se esse bloco responde pergunta de cliente, mova-o.`,
+      );
+    }
+  }
+
+  return { empresa, atendimento };
 }
+
+const carregado = carregar();
 
 /**
  * FATOS. Vão pro RAG (`npm run ingest`) e servem de fallback no prompt.
  *
- * Rode `npm run ingest` toda vez que mexer nestes arquivos — senão a busca
+ * Rode `npm run ingest` toda vez que mexer na seção [EMPRESA] — senão a busca
  * continua respondendo com a versão antiga.
  */
-export const BASE_CONHECIMENTO: KnowledgeChunk[] = carregarPasta("empresa");
+export const BASE_CONHECIMENTO: KnowledgeChunk[] = carregado.empresa;
 
 /**
  * COMPORTAMENTO. Fica FIXO no prompt, sempre presente.
@@ -158,4 +224,4 @@ export const BASE_CONHECIMENTO: KnowledgeChunk[] = carregarPasta("empresa");
  * sorteada por similaridade. Se a IA só se comportasse bem quando a busca
  * trouxesse o texto certo, ela se comportaria mal de forma aleatória.
  */
-export const DIRETRIZES: KnowledgeChunk[] = carregarPasta("atendimento");
+export const DIRETRIZES: KnowledgeChunk[] = carregado.atendimento;

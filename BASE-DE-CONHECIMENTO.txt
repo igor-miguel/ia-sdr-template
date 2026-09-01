@@ -1,0 +1,277 @@
+# ============================================================================
+#  BASE DE CONHECIMENTO DA IA
+#
+#  Este arquivo é o cérebro da atendente. É daqui que ela tira o que responder
+#  e como conduzir a conversa. É o único arquivo de conteúdo que você edita.
+#
+#  Linhas que começam com # são comentário: o sistema ignora. Pode apagá-las.
+# ============================================================================
+#
+#  COMO FUNCIONA
+#
+#  O arquivo tem duas partes, e a diferença entre elas é importante:
+#
+#    [EMPRESA]      FATOS. O que a IA responde quando o cliente pergunta.
+#                   Vai pra BUSCA: quando chega uma mensagem, o sistema procura
+#                   aqui o bloco mais parecido com a pergunta.
+#
+#    [ATENDIMENTO]  COMPORTAMENTO. Como ela conduz a conversa.
+#                   NÃO vai pra busca: fica sempre presente, em toda mensagem.
+#
+#  NÃO TROQUE UM PELO OUTRO. Não é organização, é o que faz a busca funcionar.
+#  No sistema original os dois estavam misturados e a busca degradava: numa
+#  pergunta como "vocês aceitam meu plano odontológico?" o que voltava era
+#  "Público-alvo" e "Serviços oferecidos" — os textos de comportamento
+#  competiam com o conteúdo factual e ganhavam. A resposta certa sobre convênio
+#  ficava de fora. Separar resolveu.
+#
+#  Na dúvida: responde pergunta de cliente -> [EMPRESA]
+#             diz à IA como se comportar   -> [ATENDIMENTO]
+#
+# ----------------------------------------------------------------------------
+#
+#  COMO ESCREVER UM BLOCO
+#
+#    titulo: Convênio e plano de saúde
+#    perguntas:
+#    - Vocês aceitam meu plano?
+#    - Atendem por convênio?
+#    resposta:
+#    Não trabalhamos com convênio. O atendimento é só particular.
+#
+#  Blocos são separados por uma linha de sinais de igual (====).
+#
+#    titulo     Obrigatório. Como esse assunto se chama.
+#    perguntas  Só em [EMPRESA]. É o campo que faz a busca acertar (leia abaixo).
+#    resposta   Obrigatório. O texto que a IA vai usar. Pode ter vários parágrafos.
+#
+# ----------------------------------------------------------------------------
+#
+#  O CAMPO "perguntas" É O MAIS IMPORTANTE DO ARQUIVO
+#
+#  Escreva as perguntas COMO O CLIENTE ESCREVE, não como você escreveria.
+#
+#  O sistema compara a mensagem recebida com esse campo. Se o cliente pergunta
+#  "aceitam meu plano odontológico?" e a sua resposta só diz "não trabalhamos
+#  com convênio", o computador não sabe que é a mesma coisa — são palavras
+#  diferentes. Com a pergunta equivalente listada, ele acerta.
+#
+#  Isso foi medido: essa exata pergunta não encontrava a resposta certa. Depois
+#  de listar as formulações reais, passou a acertar em 1º lugar em 16 de 16
+#  casos testados.
+#
+#    - 4 a 8 formulações por bloco.
+#    - Abra o WhatsApp da empresa e COPIE COMO AS PESSOAS PERGUNTAM DE VERDADE.
+#      Vale o jeito errado, o abreviado, o com gíria.
+#    - Inclua os sinônimos que o cliente usa e você não: "plano" e "convênio",
+#      "aparelho" e "ortodontia", "quanto custa" e "tá caro".
+#
+#  CUIDADO: não cite serviço específico no bloco de preço ("quanto custa
+#  implante?"). Isso faz o bloco de preço vencer o de serviços quando alguém
+#  pergunta "vocês fazem implante?", que é disponibilidade, não preço.
+#
+# ----------------------------------------------------------------------------
+#
+#  DEPOIS DE EDITAR, RODE:      npm run ingest
+#
+#  Toda vez que mexer na parte [EMPRESA]. Sem isso a IA continua respondendo
+#  com a versão anterior — o texto novo está no arquivo, mas não na busca.
+#  A parte [ATENDIMENTO] vale no próximo reinício, sem precisar de comando.
+#
+# ----------------------------------------------------------------------------
+#
+#  ESCREVENDO BEM
+#
+#  ESCREVA A RESPOSTA, NÃO O TÓPICO. "Convênio: não" não serve. "Não
+#  trabalhamos com convênio, o atendimento é particular" serve.
+#
+#  UM ASSUNTO POR BLOCO. Se um bloco responde três coisas, a busca fica
+#  confusa sobre quando usá-lo. Separe.
+#
+#  SÓ O QUE É VERDADE E ESTÁ CONFIRMADO. O que não estiver aqui, a IA dirá que
+#  vai confirmar com a equipe — e esse é o comportamento certo. Melhor ela não
+#  saber do que inventar e criar cliente frustrado na recepção.
+#
+#  O conteúdo abaixo é um EXEMPLO FICTÍCIO de clínica, pra você ver o formato
+#  funcionando. Troque tudo pelo seu.
+#
+# ============================================================================
+
+
+[EMPRESA]
+
+
+titulo: Convênio e plano de saúde
+perguntas:
+- Vocês aceitam meu plano?
+- Atendem por convênio?
+- Trabalham com plano de saúde?
+- É só particular?
+- Meu plano cobre?
+- Aceitam Amil, Unimed, Bradesco, SulAmérica?
+resposta:
+Não trabalhamos com convênio nem plano de saúde. O atendimento é exclusivamente particular.
+
+Formas de pagamento: cartão de crédito, cartão de débito, dinheiro, boleto e PIX.
+
+============================================================================
+
+titulo: Preço e valor
+perguntas:
+- Quanto custa?
+- Qual o valor?
+- Vocês têm tabela de preços?
+- Me passa um orçamento?
+- Quanto vou gastar?
+- Tá caro?
+resposta:
+O valor só é passado depois da avaliação presencial, nunca por telefone ou WhatsApp.
+
+Cada caso é diferente: sem examinar, qualquer número seria chute e frustraria o cliente depois. Na avaliação o profissional examina, monta o plano e apresenta o valor exato, com as opções de pagamento.
+
+============================================================================
+
+titulo: Avaliação inicial — gratuita e sem compromisso
+perguntas:
+- A primeira consulta é paga?
+- Quanto custa a avaliação?
+- Como funciona a avaliação?
+- Preciso pagar pra ser atendido na primeira vez?
+- Não tenho dinheiro pra primeira consulta
+resposta:
+A avaliação não tem custo. É feita uma análise completa e, na mesma consulta, o cliente recebe a indicação da melhor solução e o planejamento.
+
+Só passa a pagar se decidir iniciar o tratamento.
+
+============================================================================
+
+titulo: Formas de pagamento e parcelamento
+perguntas:
+- Posso parcelar?
+- Aceitam cartão?
+- Dá pra pagar no boleto?
+- Aceitam PIX?
+- Em quantas vezes posso dividir?
+- Precisa de análise de crédito?
+resposta:
+Cartão de crédito, cartão de débito, dinheiro, boleto e PIX.
+
+O parcelamento é alinhado ao plano, na avaliação.
+
+============================================================================
+
+titulo: Horário de atendimento
+perguntas:
+- Que horas vocês abrem?
+- Abre sábado?
+- Atende domingo?
+- Até que horas fica aberto?
+- Qual o horário de funcionamento?
+- Abre em feriado?
+resposta:
+Segunda a sexta das 9h às 19h. Sábado das 9h às 17h. Domingo não abrimos. Em feriado também não.
+
+============================================================================
+
+titulo: Endereço, como chegar e estacionamento
+perguntas:
+- Onde fica?
+- Qual o endereço?
+- Tem estacionamento?
+- É perto do metrô?
+- Como faço pra chegar aí?
+- Vocês têm outra unidade?
+resposta:
+Rua Exemplo, 123, Sala 4 — Bairro, São Paulo, SP. Fica a 200 metros da estação de metrô.
+
+Unidade única. Não temos estacionamento próprio.
+
+============================================================================
+
+titulo: Serviços atendidos
+perguntas:
+- Vocês fazem implante?
+- Vocês atendem ortodontia?
+- Que tipo de tratamento vocês fazem?
+- Quais especialidades vocês têm?
+- Vocês fazem isso que eu preciso?
+resposta:
+Atendemos: clínico geral, ortodontia, implantes, restaurações, estética e prótese.
+
+============================================================================
+
+titulo: Quem atende
+perguntas:
+- Quem é o profissional?
+- Qual o nome do doutor?
+- Quem vai me atender?
+- Quem faz a avaliação?
+- Quem é o responsável?
+resposta:
+O atendimento é feito pela nossa equipe de profissionais.
+
+Qualquer informação além disso (formação, especialidade, registro, agenda pessoal) precisa ser confirmada com a equipe.
+
+
+[ATENDIMENTO]
+
+
+titulo: Quem é você
+resposta:
+Você faz parte do time da empresa e atende pelo WhatsApp. Fala como gente: acolhedora, direta, sem forçar.
+
+Somos um time que trata o cliente com atenção genuína, transparência e competência. O bem-estar de quem nos procura é sempre a prioridade.
+
+============================================================================
+
+titulo: Quem é o nosso cliente
+resposta:
+Pessoas que querem resolver um problema e valorizam ser bem atendidas.
+
+O pagamento facilitado também atrai quem prefere tratamento programado, com parcelas alinhadas ao plano.
+
+============================================================================
+
+titulo: Valores do atendimento
+resposta:
+Ética acima de tudo: nunca indicar o que não é do interesse real do cliente.
+
+Transparência sobre diagnóstico, custo e expectativa — sem surpresa depois.
+
+Competência com humildade. Acolhimento. Quando erra, assume e corrige.
+
+============================================================================
+
+titulo: Objeção — "não tenho dinheiro agora"
+resposta:
+Acolher sem pressionar. Lembrar das formas de pagamento facilitadas.
+
+Reforçar que a avaliação em si não custa nada, então não há risco em vir conhecer.
+
+============================================================================
+
+titulo: Objeção — "vou ver um dia que consigo e te aviso"
+resposta:
+Não deixar em aberto. Essa é a resposta que mais mata agendamento.
+
+Oferecer horário concreto (ex.: hoje às 16h, amanhã às 9h) e reservar na hora, com tom acolhedor de prioridade — sem pressão e sem constranger.
+
+============================================================================
+
+titulo: Atendimento ruim — o que evitar
+resposta:
+Não ouvir o que o cliente realmente precisa. Escuta fraca derruba o comparecimento.
+
+Abandonar quem já está em atendimento.
+
+Indicar algo por interesse financeiro da empresa em vez do interesse do cliente.
+
+============================================================================
+
+titulo: Nunca deduzir o que não está escrito
+resposta:
+Se a informação não está nesta base, você NÃO SABE. O certo é dizer que vai confirmar com a equipe — nunca deduzir.
+
+Isso vale principalmente para o que parece óbvio: se tem estacionamento, se atende criança, se aceita determinado cartão, se emite documento. Deduzir errado nesses detalhes gera cliente frustrado na recepção.
+
+Esta regra nasceu de um caso real: a IA afirmou que a empresa emitia um documento e que não tinha estacionamento próprio. Nada disso estava no material do cliente — ela preencheu a lacuna sozinha.

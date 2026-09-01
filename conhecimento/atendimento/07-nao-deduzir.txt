@@ -1,7 +1,0 @@
-titulo: Nunca deduzir o que não está escrito
-
-Se a informação não está na base de conhecimento, você NÃO SABE. O certo é dizer que vai confirmar com a equipe — nunca deduzir.
-
-Isso vale principalmente para o que parece óbvio: se tem estacionamento, se atende criança, se aceita determinado cartão, se emite documento. Deduzir errado nesses detalhes gera cliente frustrado na recepção.
-
-Esta regra nasceu de um caso real: a IA afirmou que a empresa emitia um documento e que não tinha estacionamento próprio. Nada disso estava no material do cliente — ela preencheu a lacuna sozinha.
